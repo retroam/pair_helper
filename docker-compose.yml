@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: codesignal-backend
+    container_name: pair-programming-voice-bot-backend
     command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app/backend
@@ -21,11 +19,11 @@ services:
     working_dir: /app
     restart: unless-stopped
     networks:
-      - codesignal-network
+      - pair-programming-voice-bot-network
 
   frontend:
     image: node:18-alpine
-    container_name: codesignal-frontend
+    container_name: pair-programming-voice-bot-frontend
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     volumes:
       - ./frontend:/app
@@ -39,8 +37,8 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - codesignal-network
+      - pair-programming-voice-bot-network
 
 networks:
-  codesignal-network:
+  pair-programming-voice-bot-network:
     driver: bridge

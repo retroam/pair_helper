@@ -22,7 +22,7 @@ def save_snapshot(session_id: str, stage: int, files: Dict[str, str]) -> None:
         "stage": stage,
         "files": files,
     }
-    snapshot_file.write_text(json.dumps(snapshot, ensure_ascii=True), encoding="utf-8")
+    snapshot_file.write_text(json.dumps(snapshot, ensure_ascii=False), encoding="utf-8")
 
 
 def log_event(session_id: str, question_name: str, action: str, payload: Dict[str, Any]) -> None:
@@ -38,4 +38,4 @@ def log_event(session_id: str, question_name: str, action: str, payload: Dict[st
         "payload": payload,
     }
     with LOG_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=True) + "\n")
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")

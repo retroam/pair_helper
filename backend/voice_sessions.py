@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from .config import QUESTIONS_ROOT, REPO_ROOT
 
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+def _ensure_src_on_path() -> None:
+    """Ensure src/ is importable for local runs that skip Docker's PYTHONPATH."""
+    src_root = REPO_ROOT / "src"
+    if str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
+
+
+_ensure_src_on_path()
 
 from pair_programming_voice_bot.agent import PairProgrammingVoiceBot
 from pair_programming_voice_bot.modes import Mode
@@ -49,4 +53,3 @@ class VoiceSessionStore:
             return None
         session.bot.set_mode(mode, trigger=trigger)
         return session.bot.mode
-

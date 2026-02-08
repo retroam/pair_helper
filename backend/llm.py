@@ -177,11 +177,6 @@ class ClaudeClient:
                 code_match = re.search(r"<code file=[^>]+>(.*?)</code>", result_text, re.DOTALL)
                 if code_match:
                     code_body = code_match.group(1)
-                    public_methods = re.findall(
-                        r"def\s+(add_rule|remove_rule|evaluate)\b.*?(?=\n    def |\nclass |\Z)",
-                        code_body,
-                        re.DOTALL,
-                    )
                     has_return_none = bool(
                         re.search(
                             r"def\s+(?:add_rule|remove_rule|evaluate)\b[^}]*?return\s+None",

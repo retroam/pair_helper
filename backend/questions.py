@@ -11,7 +11,7 @@ class Stage:
     name: str
     visible_tests: List[str]
     hidden_tests: List[str]
-    reveal_files: List[str] = None  # files to reveal when this stage unlocks
+    reveal_files: Optional[List[str]] = None  # files to reveal when this stage unlocks
 
     @classmethod
     def from_json(cls, data: Dict) -> "Stage":
