@@ -294,7 +294,7 @@ export default function App() {
   useEffect(() => {
     if (selectedQuestion && Object.keys(files).length > 0) {
       const timer = setTimeout(() => {
-        localStorage.setItem(`codesignal_${selectedQuestion}_files`, JSON.stringify(files));
+        localStorage.setItem(`pair_programming_voice_bot_${selectedQuestion}_files`, JSON.stringify(files));
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -320,7 +320,7 @@ export default function App() {
       const data = await fetchQuestion(name);
       setQuestion(data);
 
-      const storageKey = `codesignal_${name}_files`;
+      const storageKey = `pair_programming_voice_bot_${name}_files`;
       const savedFiles = localStorage.getItem(storageKey);
       if (savedFiles) {
         try {
@@ -383,7 +383,7 @@ export default function App() {
       await logActivity(session.session_id, selectedQuestion, "session_reset", {
         final_score: currentScore,
       });
-      localStorage.removeItem(`codesignal_${selectedQuestion}_files`);
+      localStorage.removeItem(`pair_programming_voice_bot_${selectedQuestion}_files`);
     }
     setQuestion(null);
     setSession(null);

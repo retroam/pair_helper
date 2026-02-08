@@ -1,12 +1,10 @@
-import io
 import os
 import re
 import time
 from dataclasses import asdict
 from typing import Dict, Optional
 
-from dotenv import load_dotenv
-load_dotenv()
+from . import env  # noqa: F401
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,7 +37,7 @@ try:
 except Exception:
     pass
 
-app = FastAPI(title="CodeSignal Assessment Clone")
+app = FastAPI(title="Pair Programming Voice Bot")
 sessions = SessionStore()
 voice_sessions = VoiceSessionStore()
 
@@ -138,7 +136,11 @@ def _get_llm_context(voice_session, current_level: int, utterance: str = "", str
     }
 
 
-# ─── Assessment endpoints (unchanged) ───
+# ─── Assessment / challenge endpoints ───
+
+def _append_history(voice_session, role: str, content: str, *, max_items: int = 20) -> None:
+    voice_session.conversation_history.append({"role": role, "content": content})
+    voice_session.conversation_history = voice_session.conversation_history[-max_items:]
 
 @app.get("/api/questions")
 def list_questions():
@@ -330,9 +332,8 @@ def voice_input(payload: VoiceInputRequest):
             **ctx, conversation_history=voice_session.conversation_history
         )
         messages = [llm_response]
-        voice_session.conversation_history.append({"role": "user", "content": payload.utterance})
-        voice_session.conversation_history.append({"role": "assistant", "content": llm_response})
-        voice_session.conversation_history = voice_session.conversation_history[-20:]
+        _append_history(voice_session, "user", payload.utterance)
+        _append_history(voice_session, "assistant", llm_response)
 
     return {"messages": messages, "mode": voice_session.bot.mode.value}
 
@@ -354,9 +355,12 @@ def voice_code_update(payload: VoiceCodeUpdateRequest):
         message = _llm_client.generate_response(
             **ctx, conversation_history=voice_session.conversation_history
         )
-        voice_session.conversation_history.append({"role": "system", "content": "Code update observed. Struggle signal detected."})
-        voice_session.conversation_history.append({"role": "assistant", "content": message})
-        voice_session.conversation_history = voice_session.conversation_history[-20:]
+        _append_history(
+            voice_session,
+            "system",
+            "Code update observed. Struggle signal detected.",
+        )
+        _append_history(voice_session, "assistant", message)
 
     return {"message": message, "mode": voice_session.bot.mode.value}
 
@@ -378,9 +382,12 @@ def voice_check(payload: VoiceCheckRequest):
         message = _llm_client.generate_response(
             **ctx, conversation_history=voice_session.conversation_history
         )
-        voice_session.conversation_history.append({"role": "system", "content": "Periodic check. Struggle signal detected."})
-        voice_session.conversation_history.append({"role": "assistant", "content": message})
-        voice_session.conversation_history = voice_session.conversation_history[-20:]
+        _append_history(
+            voice_session,
+            "system",
+            "Periodic check. Struggle signal detected.",
+        )
+        _append_history(voice_session, "assistant", message)
 
     return {"message": message, "mode": voice_session.bot.mode.value}
 
@@ -460,9 +467,12 @@ def bot_step(payload: BotStepRequest):
         conversation_history=voice_session.conversation_history,
     )
     parsed = _parse_bot_response(result["narration"])
-    voice_session.conversation_history.append({"role": "user", "content": f"[bot_step] Level {current_level} — generate next implementation step."})
-    voice_session.conversation_history.append({"role": "assistant", "content": result["narration"]})
-    voice_session.conversation_history = voice_session.conversation_history[-20:]
+    _append_history(
+        voice_session,
+        "user",
+        f"[bot_step] Level {current_level} — generate next implementation step.",
+    )
+    _append_history(voice_session, "assistant", result["narration"])
     return {
         "narration": parsed["narration"],
         "file_updates": parsed["file_updates"],
@@ -494,7 +504,6 @@ def publish_session(payload: PublishRequest):
         return {"status": "published", "notion_url": url}
 
     # Fallback: save locally
-    import tempfile
     path = f"/tmp/session_{payload.session_id}.json"
     bot.journal.save(path)
     return {"status": "saved_locally", "path": path}

@@ -9,49 +9,39 @@ from .agent import PairProgrammingVoiceBot
 from .modes import Mode
 from .workspace import QuestionWorkspace
 
-try:
-    from fastapi import FastAPI, HTTPException
-    from pydantic import BaseModel
-except ImportError:  # pragma: no cover - optional runtime dependency
-    FastAPI = None  # type: ignore[assignment]
-    HTTPException = None  # type: ignore[assignment]
-    BaseModel = object  # type: ignore[assignment]
-
 
 def _default_workspace_root() -> Path:
     return Path(__file__).resolve().parents[2] / "questions" / "ruleengine"
 
 
-class ModeRequest(BaseModel):  # type: ignore[misc]
-    mode: str
-
-
-class VoiceRequest(BaseModel):  # type: ignore[misc]
-    utterance: str
-    current_level: int = 1
-
-
-class CodeUpdateRequest(BaseModel):  # type: ignore[misc]
-    code: str
-    current_level: int = 1
-
-
-class RunResultRequest(BaseModel):  # type: ignore[misc]
-    exit_code: int
-    stderr: str
-    stage_index: int
-    visible_passed: int = 0
-    visible_total: int = 0
-
-
-class PeriodicRequest(BaseModel):  # type: ignore[misc]
-    current_level: int
-    tests_still_failing: bool = True
-
-
 def create_app(bot: Optional[PairProgrammingVoiceBot] = None):  # pragma: no cover - thin wrapper
-    if FastAPI is None:
-        raise RuntimeError("fastapi is not installed; install it to run the API server.")
+    try:
+        from fastapi import FastAPI, HTTPException
+        from pydantic import BaseModel
+    except ImportError as exc:  # pragma: no cover - optional runtime dependency
+        raise RuntimeError("fastapi is not installed; install it to run the API server.") from exc
+
+    class ModeRequest(BaseModel):
+        mode: str
+
+    class VoiceRequest(BaseModel):
+        utterance: str
+        current_level: int = 1
+
+    class CodeUpdateRequest(BaseModel):
+        code: str
+        current_level: int = 1
+
+    class RunResultRequest(BaseModel):
+        exit_code: int
+        stderr: str
+        stage_index: int
+        visible_passed: int = 0
+        visible_total: int = 0
+
+    class PeriodicRequest(BaseModel):
+        current_level: int
+        tests_still_failing: bool = True
 
     app = FastAPI(title="Pair Programming Voice Bot API")
     agent = bot or PairProgrammingVoiceBot(
@@ -108,6 +98,7 @@ def create_app(bot: Optional[PairProgrammingVoiceBot] = None):  # pragma: no cov
     return app
 
 
-if FastAPI is not None:  # pragma: no cover
+try:  # pragma: no cover - optional runtime dependency
     app = create_app()
-
+except RuntimeError:
+    app = None

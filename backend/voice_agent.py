@@ -2,9 +2,8 @@ import os
 from typing import Annotated
 
 import httpx
-from dotenv import load_dotenv
 
-load_dotenv()
+from . import env  # noqa: F401
 
 from line.events import AgentSendText
 from line.llm_agent import LlmAgent, LlmConfig, passthrough_tool
