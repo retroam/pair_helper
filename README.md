@@ -1,57 +1,123 @@
 # Pair Programming Voice Bot
 
-Implements the design in `docs/design.md` using the reusable assessment stack plus voice-mode orchestration.
+A real-time voice-powered pair programming assistant that coaches developers through coding challenges. Built with **Cartesia Line SDK** for low-latency voice, **Anthropic Claude** for reasoning, **Browserbase** for live concept lookups, and **Notion** for session journaling.
 
-## Repo structure
+The bot operates in two collaboration modes — **Bot Drives** (the AI writes code and narrates its reasoning) and **Human Drives** (the developer codes while the AI watches, detects struggles, and offers targeted hints).
 
-- `backend/`: FastAPI assessment API (copied from `preparation/`) plus voice endpoints.
-- `frontend/`: React + Monaco assessment UI (copied from `preparation/`) plus voice-mode UI controls.
-- `questions/ruleengine/`: 4-level progressive Rule Engine challenge.
-- `src/pair_programming_voice_bot/`: core mode state machine, struggle detector, tool policy, and agent orchestration.
-- `tests/`: unit/integration tests for the new core modules.
-- `docker-compose.yml`: local full-stack runner.
+## Architecture
 
-## Voice features added
+```
+┌─────────────────────────────────────────────────────────┐
+│                     React Frontend                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
+│  │  Monaco   │  │  Voice   │  │   TTS    │  │  Push   │ │
+│  │  Editor   │  │   Orb    │  │  Player  │  │ to Talk │ │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬────┘ │
+│       │              │             │              │      │
+└───────┼──────────────┼─────────────┼──────────────┼──────┘
+        │ REST         │ REST        │ Audio        │ STT
+        ▼              ▼             ▼              ▼
+┌───────────────────────────────────────────────────────────┐
+│                   FastAPI Backend (:8000)                  │
+│                                                           │
+│  /api/execute ─── Docker sandbox ─── Test runner          │
+│  /api/voice/*  ── Voice session store                     │
+│  /api/tts ────── Cartesia TTS proxy                       │
+│  /api/session/publish ── Notion page upload               │
+│                                                           │
+│  ┌─────────────┐  ┌──────────┐  ┌──────────────────────┐ │
+│  │ Claude LLM  │  │ Struggle │  │ Mode State Machine   │ │
+│  │  (Anthropic) │  │ Detector │  │ bot_drives ⇄ human  │ │
+│  └─────────────┘  └──────────┘  └──────────────────────┘ │
+└───────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────┐
+│              Cartesia Line Voice Agent                     │
+│                                                           │
+│  VoiceAgentApp + LlmAgent (Claude via LiteLLM)           │
+│  Sonic TTS (WebSocket) + Ink STT                          │
+│                                                           │
+│  Tools:                                                   │
+│    @passthrough_tool run_tests      → /api/execute        │
+│    @passthrough_tool switch_mode    → /api/voice/mode     │
+│    @passthrough_tool lookup_concept → /api/voice/lookup   │
+│    @passthrough_tool publish_notion → /api/session/publish│
+│    generate_code                    → /api/voice/bot_step │
+└───────────────────────────────────────────────────────────┘
+```
 
-- Mode state machine: `bot_drives` and `human_drives`.
-- Backend voice session store keyed by assessment session.
-- New API endpoints:
-  - `GET /api/voice/{session_id}`
-  - `POST /api/voice/mode`
-  - `POST /api/voice/input`
-  - `POST /api/voice/code_update`
-  - `POST /api/voice/check`
-  - `POST /api/voice/lookup`
-- Frontend:
-  - Header mode toggle.
-  - Voice coach panel with command input (`my turn`, `you drive`, `lookup ...`).
-  - Automatic struggle-signal polling in `human_drives`.
+## Tools & Integrations
 
-## Rule Engine status
+| Tool | Purpose |
+|------|---------|
+| **Cartesia Line SDK** | Real-time voice agent with Sonic TTS + Ink STT over WebSocket |
+| **Anthropic Claude** | Code generation, coaching hints, concept explanations |
+| **Browserbase** | Live web search for programming concepts via headless browser |
+| **Notion API** | Session journal upload — test timeline, struggle moments, mode switches, final code |
+| **Docker** | Sandboxed code execution with resource limits |
+| **Monaco Editor** | In-browser code editing with syntax highlighting |
 
-`questions/ruleengine/ruleengine.py` now fully implements:
+## Key Features
 
-- Level 1: simple rule add/remove/evaluate.
-- Level 2: nested AND/OR compound rules.
-- Level 3: priority ordering + first-match-wins groups.
-- Level 4: history, top rules, snapshot/restore (history preserved).
+- **Two collaboration modes** — toggle via voice ("you drive" / "my turn") or UI button
+- **Struggle detection** — detects backtracking, repeated failures, long pauses, and explicit help requests
+- **Progressive challenge levels** — tests unlock incrementally as you pass each stage
+- **Concept lookup** — say "lookup forward chaining" to search docs via Browserbase
+- **Session journal** — publish a full session report to Notion with one click
+- **Voice orb** — animated orb with idle/speaking/listening states
 
-## Run locally
+## Project Structure
 
-### Environment
+```
+backend/
+  app.py              # FastAPI server — assessment + voice endpoints
+  voice_agent.py      # Cartesia Line SDK voice agent server
+  llm.py              # Claude client for coaching + code generation
+  tts.py              # Cartesia TTS proxy (REST fallback)
+  runner.py           # Docker-sandboxed test execution
+  sessions.py         # Assessment session store
+  voice_sessions.py   # Voice session store with bot state
+
+frontend/src/
+  App.tsx             # Main app — editor, terminal, voice panel
+  VoiceOrb.tsx        # Animated voice orb component
+  tts.ts              # TTS audio playback (Cartesia direct or proxy)
+  mic.ts              # Push-to-talk via Web Speech API
+
+src/pair_programming_voice_bot/
+  agent.py            # Core bot — mode management, struggle response, tools
+  modes.py            # Mode state machine (bot_drives ⇄ human_drives)
+  struggle_detector.py # Detects coding struggles from signals
+  concept_lookup.py   # Browserbase + static KB concept search
+  notion_logger.py    # Session journal → Notion page upload
+  workspace.py        # File system tools for the challenge workspace
+  policy.py           # Tool access control per mode
+
+questions/ruleengine/ # 4-level progressive Rule Engine challenge
+```
+
+## Run Locally
+
+### Setup
 
 ```bash
 cp .env.example .env
+# Fill in: ANTHROPIC_API_KEY, CARTESIA_API_KEY
+# Optional: BROWSERBASE_API_KEY, NOTION_API_KEY, NOTION_PARENT_PAGE_ID
 ```
-
-Current required value:
-- `VITE_API_PROXY_TARGET` (defaults to `http://127.0.0.1:8000` in `.env`).
 
 ### Backend
 
 ```bash
 pip install -r backend/requirements.txt
 PYTHONPATH=src uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
+```
+
+### Line Voice Agent
+
+```bash
+python3 backend/voice_agent.py
 ```
 
 ### Frontend
@@ -62,22 +128,8 @@ npm install
 npm run dev
 ```
 
-By default Vite proxies `/api` to `http://127.0.0.1:8000`.
-
-## Run tests
-
-From repo root:
+### Tests
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py"
-python3 questions/ruleengine/basicTests.py
-python3 questions/ruleengine/hidden_level2.py
-python3 questions/ruleengine/hidden_level3.py
-python3 questions/ruleengine/hidden_level4.py
-```
-
-## Quick core demo
-
-```bash
-PYTHONPATH=src python3 scripts/demo_session.py
 ```
