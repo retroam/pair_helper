@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic>=1.10,<3
+python-multipart
+anthropic
+cartesia
+httpx
+browserbase
+notion-client
+cartesia-line

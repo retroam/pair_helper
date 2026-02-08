@@ -1,0 +1,39 @@
+{
+  "name": "Rule Engine",
+  "visible_files": ["desc.md", "ruleengine.py", "basicTests.py"],
+  "entrypoint": "basicTests.py",
+  "environment": {
+    "language": "Python",
+    "version": "3.10",
+    "testing_framework": "unittest"
+  },
+  "default_duration_minutes": 60,
+  "tags": ["logic", "patterns", "state"],
+  "estimated_difficulty": "medium",
+  "stages": [
+    {
+      "name": "Level 1",
+      "visible_tests": ["basicTests.py"],
+      "hidden_tests": [],
+      "reveal_files": []
+    },
+    {
+      "name": "Level 2",
+      "visible_tests": ["hidden_level2.py"],
+      "hidden_tests": [],
+      "reveal_files": ["desc_level2.md"]
+    },
+    {
+      "name": "Level 3",
+      "visible_tests": ["hidden_level3.py"],
+      "hidden_tests": [],
+      "reveal_files": ["desc_level3.md"]
+    },
+    {
+      "name": "Level 4",
+      "visible_tests": ["hidden_level4.py"],
+      "hidden_tests": [],
+      "reveal_files": ["desc_level4.md"]
+    }
+  ]
+}

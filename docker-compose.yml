@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codesignal-backend
+    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app/backend
+      - ./questions:/app/questions
+      - ./src:/app/src
+      - /var/run/docker.sock:/var/run/docker.sock  # Allow backend to spawn Docker containers
+      - /tmp:/tmp
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/src
+    working_dir: /app
+    restart: unless-stopped
+    networks:
+      - codesignal-network
+
+  frontend:
+    image: node:18-alpine
+    container_name: codesignal-frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_PROXY_TARGET=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - codesignal-network
+
+networks:
+  codesignal-network:
+    driver: bridge
